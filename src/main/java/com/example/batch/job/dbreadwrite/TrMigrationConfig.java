@@ -39,8 +39,8 @@ public class TrMigrationConfig {
     private AccountsRepository accountsRepository;
 
     @Bean
-    public Job trMigrationJob1(JobRepository jobRepository, @Qualifier("trMigrationStep") Step step) {
-        return new JobBuilder("trMigrationJob2", jobRepository)
+    public Job trMigrationJob(JobRepository jobRepository, @Qualifier("trMigrationStep") Step step) {
+        return new JobBuilder("trMigrationJob", jobRepository)
                 .start(step)
                 .build();
     }
@@ -83,7 +83,7 @@ public class TrMigrationConfig {
             public void write(Chunk<? extends Accounts> chunk) throws Exception {
                 chunk.forEach(item -> accountsRepository.save(item));
             }
-        }
+        };
     }
 
     @StepScope

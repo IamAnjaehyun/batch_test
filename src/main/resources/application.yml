@@ -1,7 +1,10 @@
 spring:
   batch:
+    job:
+      name: ${job.name:NONE} #job name을 파라미터로 받기 위함
+      enabled: true
     jdbc:
-      initialize-schema: ALWAYS
+      initialize-schema: always
   datasource:
     url: jdbc:mysql://localhost:3306/spring_batch
     driver-class-name: com.mysql.cj.jdbc.Driver

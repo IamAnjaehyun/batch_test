@@ -1,7 +1,8 @@
-package com.example.batch.job.multiplestep;
+package com.example.batch.job.executioncontext;
 
 import com.example.batch.job.filedatareadwrite.FileDataReadWriteConfig;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
@@ -17,7 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import java.time.LocalDateTime;
@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
  * run: --spring.batch.job.name=multipleStepJob
  */
 
+@Slf4j
 @Configuration
 @RequiredArgsConstructor
 public class MultipleStepJobConfig {
@@ -35,27 +36,14 @@ public class MultipleStepJobConfig {
     @Autowired
     private FileDataReadWriteConfig fileDataReadWriteConfig;
 
-    @Scheduled(cron = "1 * * * * *") // 매 분 1초에 실행
-    public void runMultipleStepJob() throws Exception {
-        JobParameters jobParameters1 = new JobParametersBuilder()
-//                .addString("jobName", "multipleStepJob_" + System.currentTimeMillis()) // 현재 시간을 포함한 고유한 값
-                .addString("jobName", "첫 번째 작업 & 여러 스텝이 있는 작업")
-                .addString("startTime", LocalDateTime.now().toString()) // 현재 시간을 매개변수로 추가
-                .toJobParameters();
-        jobLauncher.run(multipleStepJob(null, null, null, null), jobParameters1);
-        System.out.println("=======실행 1=======");
-        System.out.println("잠");
-        Thread.sleep(1000);
-        System.out.println("깸");
-        JobParameters jobParameters2 = new JobParametersBuilder()
-//                .addString("jobName", "multipleStepJob_" + System.currentTimeMillis()) // 현재 시간을 포함한 고유한 값
-                .addString("jobName", "두 번째 작업 & 파일 작성 작업")
-                .addString("startTime", LocalDateTime.now().toString()) // 현재 시간을 매개변수로 추가
-                .toJobParameters();
-        jobLauncher.run(fileDataReadWriteConfig.fileDataReadWriteJob(null, null), jobParameters2);
-
-        System.out.println("=======실행 2=======");
-    }
+//    @Scheduled(cron = "1 * * * * *") // 매 분 1초에 실행
+//    public void runMultipleStepJob() throws Exception {
+//        JobParameters jobParameters1 = new JobParametersBuilder()
+//                .addString("jobName", "첫 번째 작업 & 여러 스텝이 있는 작업")
+//                .addString("startTime", LocalDateTime.now().toString()) // 현재 시간을 매개변수로 추가
+//                .toJobParameters();
+//        jobLauncher.run(multipleStepJob(null, null, null, null), jobParameters1);
+//    }
 
     @Bean
     public Job multipleStepJob(JobRepository jobRepository, @Qualifier("multipleStep1") Step multipleStep1,
@@ -85,7 +73,8 @@ public class MultipleStepJobConfig {
     }
 
     @Bean
-    public Step multipleStep3(JobRepository jobRepository, PlatformTransactionManager platformTransactionManager, @Qualifier("JobListenerMultipleTasklet3") Tasklet tasklet) {
+    public Step multipleStep3(JobRepository jobRepository, PlatformTransactionManager platformTransactionManager,
+                              @Qualifier("JobListenerMultipleTasklet3") Tasklet tasklet) {
         return new StepBuilder("multipleStep3", jobRepository)
                 .tasklet(tasklet, platformTransactionManager)
                 .allowStartIfComplete(true)
@@ -95,7 +84,7 @@ public class MultipleStepJobConfig {
     @Bean
     public Tasklet JobListenerMultipleTasklet1() {
         return (((contribution, chunkContext) -> {
-            System.out.println("=== JobListenerMultipleTasklet1 시작 ===");
+            log.warn("==============                        JobListenerMultipleTasklet1 시작                                        =======");
 
             ExecutionContext executionContext = chunkContext
                     .getStepContext()
@@ -103,10 +92,10 @@ public class MultipleStepJobConfig {
                     .getJobExecution()
                     .getExecutionContext();
 
-            executionContext.put("tasklet1", "hi tasklet 1");
+            executionContext.put("tasklet1", "!!Tasklet 1 에서 출발!!");
 
-            System.out.println("tasklet1 키 값을 가진 데이터= " + executionContext.get("tasklet1") + "를 Tasklet2로 넘기기");
-            System.out.println("=== JobListenerMultipleTasklet1 종료 ===");
+            log.warn("==============        tasklet1 의 Value 값인  <<" + executionContext.get("tasklet1") + ">> 를 ExecutionContext 에 담기            =======");
+            log.warn("==============                        JobListenerMultipleTasklet1 종료                                        =======");
 
             return RepeatStatus.FINISHED;
         }));
@@ -115,7 +104,7 @@ public class MultipleStepJobConfig {
     @Bean
     public Tasklet JobListenerMultipleTasklet2() {
         return (((contribution, chunkContext) -> {
-            System.out.println("=== JobListenerMultipleTasklet2 시작 ===");
+            log.warn("==============                        JobListenerMultipleTasklet2 시작                                        =======");
 
             ExecutionContext executionContext = chunkContext
                     .getStepContext()
@@ -123,8 +112,10 @@ public class MultipleStepJobConfig {
                     .getJobExecution()
                     .getExecutionContext();
 
-            System.out.println("tasklet1 에서 가져온 데이터 tasklet1의 value = " + executionContext.get("tasklet1"));
-            System.out.println("=== JobListenerMultipleTasklet2 종료 ===");
+            log.warn("==============        tasklet1 에서 가져온 데이터 tasklet1의 value = " + executionContext.get("tasklet1") + " ===> 2에서 호출        =======");
+            executionContext.put("tasklet1", "!!Tasklet 2 에서 변환!!");
+            log.warn("==============        tasklet1 에서 가져온 데이터 tasklet1의 value = " + executionContext.get("tasklet1") + " ===> 2에서 변환        =======");
+            log.warn("==============                        JobListenerMultipleTasklet2 종료                                        =======");
 
             return RepeatStatus.FINISHED;
         }));
@@ -133,15 +124,15 @@ public class MultipleStepJobConfig {
     @Bean
     public Tasklet JobListenerMultipleTasklet3() {
         return (((contribution, chunkContext) -> {
-            System.out.println("=== JobListenerMultipleTasklet3 시작 ===");
+            log.warn("==============                        JobListenerMultipleTasklet3 시작                                        =======");
             ExecutionContext executionContext = chunkContext
                     .getStepContext()
                     .getStepExecution()
                     .getJobExecution()
                     .getExecutionContext();
 
-            System.out.println("tasklet1 에서 가져온 데이터 tasklet1의 value = " + executionContext.get("tasklet1") + " ===> 3에서도 호출 가능");
-            System.out.println("=== JobListenerMultipleTasklet3 종료 ===");
+            log.warn("==============        tasklet1 에서 가져온 데이터 tasklet1의 value = " + executionContext.get("tasklet1") + " ===> 3에서도 호출 가능  =======");
+            log.warn("==============                        JobListenerMultipleTasklet3 종료                                        =======");
 
             return RepeatStatus.FINISHED;
         }));

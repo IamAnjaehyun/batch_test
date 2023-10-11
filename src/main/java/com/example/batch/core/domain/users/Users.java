@@ -5,12 +5,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
 import java.time.LocalDate;
-import java.util.Date;
 
 @Getter
 @Entity
@@ -27,7 +25,7 @@ public class Users {
     @CreatedDate
     private LocalDate createdAt;
     @LastModifiedDate
-    private LocalDate modifiedAt;
+    private LocalDate lastLogin;
 
 
     public Users(Users users) {
@@ -36,7 +34,7 @@ public class Users {
         this.phoneNumber = users.getPhoneNumber();
         this.status = Status.NEW_USER;
         this.createdAt = users.getCreatedAt();
-        this.modifiedAt = users.getModifiedAt();
+        this.lastLogin = users.getLastLogin();
     }
 
 

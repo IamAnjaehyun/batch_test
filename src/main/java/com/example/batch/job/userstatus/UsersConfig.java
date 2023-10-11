@@ -6,12 +6,10 @@ import com.example.batch.core.domain.users.type.Status;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
-import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.ItemProcessor;
@@ -19,16 +17,13 @@ import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.data.RepositoryItemReader;
 import org.springframework.batch.item.data.builder.RepositoryItemReaderBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Sort;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 
@@ -40,18 +35,18 @@ import java.util.Collections;
 @Configuration
 @RequiredArgsConstructor
 public class UsersConfig {
-    private JobLauncher jobLauncher;
-
     private static final int chunkSize = 5;
-
-    @Autowired
-    public UsersConfig(JobLauncher jobLauncher) {
-        this.jobLauncher = jobLauncher;
-    }
-
-    //Job 실행 Scheduler
+//    private JobLauncher jobLauncher;
+//
+//
+//    @Autowired
+//    public UsersConfig(JobLauncher jobLauncher) {
+//        this.jobLauncher = jobLauncher;
+//    }
+//
+////    Job 실행 Scheduler
 //    @Scheduled(cron = "0 0 3 * * *") // 매일 오전 3시에 실행
-//    @Scheduled(cron = "1 * * * * *") // 매 분 1초마다 실행
+////    @Scheduled(cron = "1 * * * * *") // 매 분 1초마다 실행
 //    public void runUsersStepJob() throws Exception {
 //        JobParameters jobParameters = new JobParametersBuilder()
 //                .addString("Job 이름", "휴면유저 판별")
@@ -68,6 +63,7 @@ public class UsersConfig {
                 .build();
     }
 
+    @JobScope
     @Bean
     public Step usersStep(JobRepository jobRepository, PlatformTransactionManager platformTransactionManager,
                           @Qualifier("usersReader") ItemReader<Users> usersReader,
@@ -75,10 +71,10 @@ public class UsersConfig {
                           @Qualifier("usersWriter") ItemWriter<Users> usersWriter) {
         return new StepBuilder("usersStep", jobRepository)
                 .allowStartIfComplete(true)
-                .<Users, Users>chunk(chunkSize, platformTransactionManager) //chunk 5 -> 5개만큼 처리 후에 commit
-                .reader(usersReader)        //데이터 읽기    -> ItemReader
-                .processor(usersProcessor)  //데이터 가공    -> ItemProcessor
-                .writer(usersWriter)        //데이터 쓰기    -> ItemWriter
+                .<Users, Users>chunk(chunkSize, platformTransactionManager)    //chunk 5 -> 5개만큼 처리 후에 commit
+                .reader(usersReader)                                //데이터 읽기    -> ItemReader
+                .processor(usersProcessor)                          //데이터 가공    -> ItemProcessor
+                .writer(usersWriter)                                //데이터 쓰기    -> ItemWriter
                 .build();
     }
 
@@ -89,6 +85,7 @@ public class UsersConfig {
                 .name("usersReader")
                 .repository(usersRepository)
                 .methodName("findAll")
+//                .methodName("findNewUserAndUser") //다른 jpa method 사용 가능
                 .sorts(Collections.singletonMap("id", Sort.Direction.ASC))
                 .pageSize(chunkSize)        // Chunk Size 와 같게
                 .build();
@@ -105,7 +102,7 @@ public class UsersConfig {
 
                 if (daysBetween >= 7) { // 7일(1주) 이상
                     users.setStatus(Status.USER);
-                    log.info(users.getName() + "님이 계정을 생성한 지 7 일이 경과되어 " + Status.USER + "로 회원 상태가 변경되었습니다.");
+                    log.info(users.getName() + " 님이 계정을 생성한 지 7 일이 경과되어 " + Status.USER + "로 회원 상태가 변경되었습니다.");
                 }
             }
 
@@ -116,7 +113,7 @@ public class UsersConfig {
 
                 if (daysBetween >= 365) { // 1년(365일) 이상
                     users.setStatus(Status.OLD_USER);
-                    log.info(users.getName() + "님의 마지막 접속 기록이 365 일 (이상) 경과 되어 " + Status.OLD_USER + "로 회원 상태가 변경 되었습니다.");
+                    log.info(users.getName() + " 님의 마지막 접속 기록이 365 일 (이상) 경과 되어 " + Status.OLD_USER + "로 회원 상태가 변경 되었습니다.");
                 }
             }
             return users;

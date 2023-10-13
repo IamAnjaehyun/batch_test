@@ -35,7 +35,7 @@ import java.util.Collections;
 @Configuration
 @RequiredArgsConstructor
 public class UsersConfig {
-    private static final int chunkSize = 5;
+//    private static final int chunkSize = 5;
 //    private JobLauncher jobLauncher;
 //
 //
@@ -70,11 +70,11 @@ public class UsersConfig {
                           @Qualifier("userProcessor") ItemProcessor<Users, Users> usersProcessor,
                           @Qualifier("usersWriter") ItemWriter<Users> usersWriter) {
         return new StepBuilder("usersStep", jobRepository)
-                .allowStartIfComplete(true)
-                .<Users, Users>chunk(chunkSize, platformTransactionManager)    //chunk 5 -> 5개만큼 처리 후에 commit
-                .reader(usersReader)                                //데이터 읽기    -> ItemReader
-                .processor(usersProcessor)                          //데이터 가공    -> ItemProcessor
-                .writer(usersWriter)                                //데이터 쓰기    -> ItemWriter
+                .allowStartIfComplete(true)                          //재시작 가능하도록
+                .<Users, Users>chunk(5, platformTransactionManager)    //chunk 5 & 한 번에 5개씩 transaction
+                .reader(usersReader)                                 //데이터 읽기    -> ItemReader
+                .processor(usersProcessor)                           //데이터 가공    -> ItemProcessor
+                .writer(usersWriter)                                 //데이터 쓰기    -> ItemWriter
                 .build();
     }
 
@@ -87,7 +87,7 @@ public class UsersConfig {
                 .methodName("findAll")
 //                .methodName("findNewUserAndUser") //다른 jpa method 사용 가능
                 .sorts(Collections.singletonMap("id", Sort.Direction.ASC))
-                .pageSize(chunkSize)        // Chunk Size 와 같게
+                .pageSize(5)                        // Chunk Size 와 같게 & 한 번에 조회할 Item의 양
                 .build();
     }
 
@@ -102,7 +102,7 @@ public class UsersConfig {
 
                 if (daysBetween >= 7) { // 7일(1주) 이상
                     users.setStatus(Status.USER);
-                    log.info(users.getName() + " 님이 계정을 생성한 지 7 일이 경과되어 " + Status.USER + "로 회원 상태가 변경되었습니다.");
+                    log.info(users.getName() + " 님이 계정을 생성한 지 7 일이 경과 되어 " + Status.USER + "로 회원 상태를 변경하였습니다.");
                 }
             }
 
@@ -113,11 +113,12 @@ public class UsersConfig {
 
                 if (daysBetween >= 365) { // 1년(365일) 이상
                     users.setStatus(Status.OLD_USER);
-                    log.info(users.getName() + " 님의 마지막 접속 기록이 365 일 (이상) 경과 되어 " + Status.OLD_USER + "로 회원 상태가 변경 되었습니다.");
+                    log.info(users.getName() + " 님의 마지막 접속 기록이 365 일 (이상) 경과 되어 " + Status.OLD_USER + "로 회원 상태를 변경하였습니다.");
                 }
             }
             return users;
         };
+
     }
 
     @StepScope

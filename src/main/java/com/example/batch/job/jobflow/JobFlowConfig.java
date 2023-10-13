@@ -41,7 +41,7 @@ public class JobFlowConfig {
                 .to(stepC)                          // StepC로 이동
                 .on("*").end()               // StepC의 결과와 관계없이 Flow 종료
                 .from(stepA).on("*")         // StepA로부터 FAILED 외의 모든 경우에
-                .to(stepB).on("*").end()     // StepB로 이동, 결과와 관계없이 Flow 종료
+                .to(stepB).on("*").end()       // StepB로 이동, 결과와 관계없이
                 .end()                              // Job 종료
                 .build();
     }
@@ -49,14 +49,14 @@ public class JobFlowConfig {
     @JobScope
     @Bean
     public Step stepA(JobRepository jobRepository, PlatformTransactionManager transactionManager,
-                      @Qualifier("itemReaderA") ItemReader itemReaderA,
+                      @Qualifier("itemReader") ItemReader itemReader,
                       @Qualifier("itemWriterA") ItemWriter itemWriterA
     ) {
         System.out.println("====================== stepA 시작 ======================");
         return new StepBuilder("stepA", jobRepository)
                 .allowStartIfComplete(true)
                 .<String, String>chunk(5, transactionManager)
-                .reader(itemReaderA)
+                .reader(itemReader)
                 .writer(itemWriterA)
                 .build();
     }
@@ -64,37 +64,37 @@ public class JobFlowConfig {
     @JobScope
     @Bean
     public Step stepB(JobRepository jobRepository, PlatformTransactionManager transactionManager,
-                      @Qualifier("itemReaderA") ItemReader itemReaderA,
-                      @Qualifier("itemWriterA") ItemWriter itemWriterA
+                      @Qualifier("itemReader") ItemReader itemReader,
+                      @Qualifier("itemWriterB") ItemWriter itemWriterB
     ) {
         System.out.println("====================== stepB 시작 ======================");
         return new StepBuilder("stepB", jobRepository)
                 .allowStartIfComplete(true)
                 .<String, String>chunk(5, transactionManager)
-                .reader(itemReaderA)
-                .writer(itemWriterA)
+                .reader(itemReader)
+                .writer(itemWriterB)
                 .build();
     }
 
     @JobScope
     @Bean
     public Step stepC(JobRepository jobRepository, PlatformTransactionManager transactionManager,
-                      @Qualifier("itemReaderA") ItemReader itemReaderA,
-                      @Qualifier("itemWriterA") ItemWriter itemWriterA
+                      @Qualifier("itemReader") ItemReader itemReader,
+                      @Qualifier("itemWriterC") ItemWriter itemWriterC
     ) {
         return new StepBuilder("stepC", jobRepository)
                 .allowStartIfComplete(true)
                 .<String, String>chunk(5, transactionManager)
-                .reader(itemReaderA)
-                .writer(itemWriterA)
+                .reader(itemReader)
+                .writer(itemWriterC)
                 .build();
     }
 
     @StepScope
     @Bean
-    public RepositoryItemReader<Users> itemReaderA(UsersRepository usersRepository) { //userRepository 에서 findAll
+    public RepositoryItemReader<Users> itemReader(UsersRepository usersRepository) { //userRepository 에서 findAll
         return new RepositoryItemReaderBuilder<Users>()
-                .name("itemReaderA")
+                .name("itemReader")
                 .repository(usersRepository)
                 .methodName("findAll")
                 .sorts(Collections.singletonMap("id", Sort.Direction.ASC))
@@ -104,13 +104,32 @@ public class JobFlowConfig {
 
     @StepScope
     @Bean
-    public ItemWriter<Users> itemWriterA() {
+    public ItemWriter<Users> itemWriterA() throws Exception {
+//        return chunk -> {
+//            for (Users user : chunk) {
+//                System.out.println("A 실행중 " + user.getId());
+//            }
+//        };
+        throw new Exception("오류 발생 !!");
+    }
+
+    @StepScope
+    @Bean
+    public ItemWriter<Users> itemWriterB() {
         return chunk -> {
             for (Users user : chunk) {
-                System.out.println(user.getName());
+                System.out.println("오류 발생 안하고 B 실행중 " + user.getId());
             }
         };
     }
 
-
+    @StepScope
+    @Bean
+    public ItemWriter<Users> itemWriterC() {
+        return chunk -> {
+            for (Users user : chunk) {
+                System.out.println(user.getName() + " 에 관한 데이터가 오류 발생으로 인해 중지되었습니다.");
+            }
+        };
+    }
 }

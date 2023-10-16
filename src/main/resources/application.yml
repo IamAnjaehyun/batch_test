@@ -14,3 +14,5 @@ spring:
 #    show-sql: true
     hibernate:
       ddl-auto: update
+logging:
+  config: classpath:logback-spring.xml
